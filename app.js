@@ -97,18 +97,22 @@ function getNextUnfilledInput(startIndex) {
 
 function updateHighlighting() {
   const allInputs = Array.from(cipherDisplayEl.querySelectorAll(".quote-input"));
-  const valuesInUse = new Map();
+  const plaintextToCipherLetters = new Map();
 
   allInputs.forEach((field) => {
     if (!field.value) {
       return;
     }
-    const count = valuesInUse.get(field.value) || 0;
-    valuesInUse.set(field.value, count + 1);
+
+    const cipherLetter = field.dataset.cipherLetter;
+    const assignedCipherLetters = plaintextToCipherLetters.get(field.value) || new Set();
+    assignedCipherLetters.add(cipherLetter);
+    plaintextToCipherLetters.set(field.value, assignedCipherLetters);
   });
 
   allInputs.forEach((field) => {
-    const isDuplicate = field.value && (valuesInUse.get(field.value) || 0) > 1;
+    const assignedCipherLetters = plaintextToCipherLetters.get(field.value) || new Set();
+    const isDuplicate = Boolean(field.value && assignedCipherLetters.size > 1);
     field.classList.toggle("is-duplicate", isDuplicate);
   });
 }
