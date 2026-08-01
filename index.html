@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aristocrat Cryptogram Solver</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <h1>Aristocrat Cryptogram Solver</h1>
+        <p>
+          Solve a quote by assigning each ciphertext letter a plaintext letter. Every time
+          you fill one in, every matching letter updates across the quote.
+        </p>
+      </header>
+
+      <section class="meta-panel" aria-label="Quote details">
+        <div>
+          <span class="label">Author</span>
+          <strong id="author">—</strong>
+        </div>
+        <div class="range-control">
+          <span class="label">Character range</span>
+          <div class="range-inputs">
+            <input id="min-char" type="number" min="1" step="1" placeholder="Min" />
+            <span>–</span>
+            <input id="max-char" type="number" min="1" step="1" placeholder="Max" />
+          </div>
+        </div>
+        <div>
+          <span class="label">Character count</span>
+          <strong id="char-count">—</strong>
+        </div>
+        <div>
+          <span class="label">Time</span>
+          <strong id="timer">00:00</strong>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Encrypted quote</h2>
+        <div id="cipher-display" class="cipher-display" aria-live="polite"></div>
+        <div id="solver-grid" class="solver-grid"></div>
+      </section>
+
+      <section class="actions" aria-label="Puzzle actions">
+        <button id="new-quote-btn" type="button">New quote</button>
+        <button id="check-btn" class="primary" type="button">Check solution</button>
+      </section>
+
+      <div id="feedback" class="feedback" aria-live="polite"></div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
