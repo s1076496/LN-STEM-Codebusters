@@ -72,13 +72,18 @@ body {
   min-width: 220px;
 }
 
+.cipher-type-control {
+  min-width: 180px;
+}
+
 .range-inputs {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.range-inputs input {
+.range-inputs input,
+.cipher-type-control select {
   width: 70px;
   padding: 8px 6px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -86,6 +91,11 @@ body {
   background: rgba(255, 255, 255, 0.06);
   color: #f6f7fb;
   text-align: center;
+}
+
+.cipher-type-control select {
+  width: 100%;
+  min-width: 140px;
 }
 
 .label {

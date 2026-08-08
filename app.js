@@ -17,6 +17,7 @@ const newQuoteBtn = document.getElementById("new-quote-btn");
 const checkBtn = document.getElementById("check-btn");
 const minCharInput = document.getElementById("min-char");
 const maxCharInput = document.getElementById("max-char");
+const cipherTypeSelect = document.getElementById("cipher-type-select");
 
 function shuffle(array) {
   const copy = [...array];
@@ -31,21 +32,46 @@ function normalizeText(text) {
   return text.toUpperCase();
 }
 
-function encryptQuote(plaintext) {
-  const letters = plaintext.toUpperCase().split("");
+function createDerangedAlphabet() {
   const shuffledAlphabet = shuffle(alphabet.split(""));
+
+  for (let index = 0; index < shuffledAlphabet.length; index += 1) {
+    while (shuffledAlphabet[index] === alphabet[index]) {
+      const swapIndex = (index + 1 + Math.floor(Math.random() * (shuffledAlphabet.length - 1))) % shuffledAlphabet.length;
+      if (swapIndex === index) {
+        continue;
+      }
+      [shuffledAlphabet[index], shuffledAlphabet[swapIndex]] = [shuffledAlphabet[swapIndex], shuffledAlphabet[index]];
+    }
+  }
+
+  return shuffledAlphabet;
+}
+
+function getCipherType() {
+  return cipherTypeSelect?.value || "aristocrat";
+}
+
+function encryptQuote(plaintext, cipherType = getCipherType()) {
+  const characters = normalizeText(plaintext).split("");
+  const shuffledAlphabet = createDerangedAlphabet();
   const plainToCipher = new Map(
     alphabet.split("").map((letter, index) => [letter, shuffledAlphabet[index]])
   );
 
-  return letters
-    .map((character) => {
-      if (/[A-Z]/.test(character)) {
-        return plainToCipher.get(character);
-      }
-      return character;
-    })
-    .join("");
+  const encryptedCharacters = characters.map((character) => {
+    if (/[A-Z]/.test(character)) {
+      return plainToCipher.get(character);
+    }
+    return character;
+  });
+
+  if (cipherType === "patristocrat") {
+    const lettersOnly = encryptedCharacters.filter((character) => /[A-Z]/.test(character)).join("");
+    return lettersOnly.match(/.{1,5}/g)?.join(" ") || lettersOnly;
+  }
+
+  return encryptedCharacters.join("");
 }
 
 function buildSolverRows(cipherText) {
@@ -165,6 +191,13 @@ function renderDisplay() {
       input.value = cipherToPlain.get(character) || "";
 
       const updateValue = (sourceInput, value) => {
+        if (value && value === character) {
+          feedbackEl.textContent = "Cipher letters cannot decrypt to themselves.";
+          feedbackEl.className = "feedback error";
+          sourceInput.value = "";
+          return;
+        }
+
         sourceInput.value = value;
         if (value) {
           cipherToPlain.set(character, value);
@@ -287,7 +320,7 @@ function renderDisplay() {
 
 function buildPuzzle(quote) {
   currentQuote = quote;
-  currentCipherText = encryptQuote(quote.content);
+  currentCipherText = encryptQuote(quote.content, getCipherType());
   currentCipherLetters = buildSolverRows(currentCipherText);
   cipherToPlain = new Map();
   authorEl.textContent = quote.author || "Unknown";
@@ -320,7 +353,10 @@ function checkSolution() {
     })
     .join("");
 
-  if (normalizeText(decodedText) === normalizeText(currentQuote.content)) {
+  const normalizedDecodedText = normalizeText(decodedText).replace(/[^A-Z]/g, "");
+  const normalizedExpectedText = normalizeText(currentQuote.content).replace(/[^A-Z]/g, "");
+
+  if (normalizedDecodedText === normalizedExpectedText) {
     stopTimer();
     const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
     const elapsedTime = formatElapsedTime(elapsedSeconds);
@@ -393,6 +429,13 @@ checkBtn.addEventListener("click", checkSolution);
     }
     buildPuzzle(pickRandomQuote());
   });
+});
+
+cipherTypeSelect.addEventListener("change", () => {
+  if (!quoteCache.length) {
+    return;
+  }
+  buildPuzzle(pickRandomQuote());
 });
 
 init().catch((error) => {
