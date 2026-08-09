@@ -6,10 +6,25 @@ let currentCipherLetters = [];
 let cipherToPlain = new Map();
 let startTime = null;
 let timerInterval = null;
+let currentCipherType = "aristocrat";
+
+const sessionStatsKey = "cryptogram-session-stats";
+const defaultSessionStats = () => ({
+  solvedCount: 0,
+  byCipherType: {
+    aristocrat: { solved: 0, totalSeconds: 0 },
+    patristocrat: { solved: 0, totalSeconds: 0 },
+  },
+});
+
+let sessionStats = loadSessionStats();
 
 const authorEl = document.getElementById("author");
 const charCountEl = document.getElementById("char-count");
 const timerEl = document.getElementById("timer");
+const sessionSolvedCountEl = document.getElementById("session-solved-count");
+const avgAristocratEl = document.getElementById("avg-aristocrat");
+const avgPatristocratEl = document.getElementById("avg-patriocrat");
 const cipherDisplayEl = document.getElementById("cipher-display");
 const solverGridEl = document.getElementById("solver-grid");
 const feedbackEl = document.getElementById("feedback");
@@ -106,6 +121,70 @@ function formatElapsedTime(elapsedSeconds) {
   const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
   const seconds = String(elapsedSeconds % 60).padStart(2, "0");
   return `${minutes}:${seconds}`;
+}
+
+function loadSessionStats() {
+  if (typeof window === "undefined" || !window.sessionStorage) {
+    return defaultSessionStats();
+  }
+
+  try {
+    const storedStats = window.sessionStorage.getItem(sessionStatsKey);
+    if (!storedStats) {
+      return defaultSessionStats();
+    }
+
+    const parsedStats = JSON.parse(storedStats);
+    return {
+      solvedCount: Number(parsedStats.solvedCount) || 0,
+      byCipherType: {
+        aristocrat: {
+          solved: Number(parsedStats.byCipherType?.aristocrat?.solved) || 0,
+          totalSeconds: Number(parsedStats.byCipherType?.aristocrat?.totalSeconds) || 0,
+        },
+        patristocrat: {
+          solved: Number(parsedStats.byCipherType?.patristocrat?.solved) || 0,
+          totalSeconds: Number(parsedStats.byCipherType?.patristocrat?.totalSeconds) || 0,
+        },
+      },
+    };
+  } catch (error) {
+    console.warn("Unable to load session stats.", error);
+    return defaultSessionStats();
+  }
+}
+
+function saveSessionStats() {
+  if (typeof window === "undefined" || !window.sessionStorage) {
+    return;
+  }
+
+  window.sessionStorage.setItem(sessionStatsKey, JSON.stringify(sessionStats));
+}
+
+function getAverageTimeForCipher(cipherType) {
+  const bucket = sessionStats.byCipherType[cipherType] || { solved: 0, totalSeconds: 0 };
+  if (!bucket.solved) {
+    return "—";
+  }
+
+  return formatElapsedTime(Math.round(bucket.totalSeconds / bucket.solved));
+}
+
+function updateSessionStatsDisplay() {
+  sessionSolvedCountEl.textContent = sessionStats.solvedCount;
+  avgAristocratEl.textContent = getAverageTimeForCipher("aristocrat");
+  avgPatristocratEl.textContent = getAverageTimeForCipher("patristocrat");
+}
+
+function recordSolvedPuzzle(elapsedSeconds) {
+  const bucket = sessionStats.byCipherType[currentCipherType] || { solved: 0, totalSeconds: 0 };
+  bucket.solved += 1;
+  bucket.totalSeconds += elapsedSeconds;
+  sessionStats.byCipherType[currentCipherType] = bucket;
+  sessionStats.solvedCount += 1;
+  saveSessionStats();
+  updateSessionStatsDisplay();
 }
 
 function getNextUnfilledInput(startIndex) {
@@ -320,7 +399,8 @@ function renderDisplay() {
 
 function buildPuzzle(quote) {
   currentQuote = quote;
-  currentCipherText = encryptQuote(quote.content, getCipherType());
+  currentCipherType = getCipherType();
+  currentCipherText = encryptQuote(quote.content, currentCipherType);
   currentCipherLetters = buildSolverRows(currentCipherText);
   cipherToPlain = new Map();
   authorEl.textContent = quote.author || "Unknown";
@@ -358,13 +438,14 @@ function checkSolution() {
 
   if (normalizedDecodedText === normalizedExpectedText) {
     stopTimer();
-    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    const elapsedSeconds = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
     const elapsedTime = formatElapsedTime(elapsedSeconds);
-    feedbackEl.textContent = `Correct! You solved it in ${elapsedTime}.`;
+    recordSolvedPuzzle(elapsedSeconds);
+    feedbackEl.textContent = `Correct! You solved it in ${elapsedTime}. Session tally: ${sessionStats.solvedCount}.`;
     feedbackEl.className = "feedback success";
     Swal.fire({
       title: "Solved!",
-      html: `<strong>Quote:</strong> ${currentQuote.content}<br><br><strong>Author:</strong> ${currentQuote.author || "Unknown"}<br><strong>Time:</strong> ${elapsedTime}`,
+      html: `<strong>Quote:</strong> ${currentQuote.content}<br><br><strong>Author:</strong> ${currentQuote.author || "Unknown"}<br><strong>Time:</strong> ${elapsedTime}<br><strong>Session tally:</strong> ${sessionStats.solvedCount}`,
       icon: "success",
       confirmButtonText: "Great!"
     });
@@ -415,6 +496,7 @@ function pickRandomQuote() {
 
 async function init() {
   await loadQuotes();
+  updateSessionStatsDisplay();
   buildPuzzle(pickRandomQuote());
 }
 
